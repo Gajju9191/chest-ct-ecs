@@ -1,9 +1,7 @@
-
 # ============================================
 # TENSORFLOW & DEEP LEARNING (Python 3.11 compatible)
 # ============================================
 tensorflow==2.15.0
-# tensorflow==2.16.1  # Alternative if you want newer features
 numpy==1.24.3
 
 # ============================================
@@ -13,11 +11,11 @@ pandas==2.0.3
 scipy==1.11.4
 
 # ============================================
-# DATA VERSION CONTROL (DVC) - Supports S3 + Google Drive
+# DATA VERSION CONTROL (DVC) - Fixed versions
 # ============================================
 dvc==3.49.0
-dvc-s3==3.49.0
-dvc-gdrive==3.49.0
+dvc-s3==3.3.0        # Fixed: Latest stable version for Python 3.11
+dvc-gdrive==3.3.0    # Fixed: Latest stable version for Python 3.11
 
 # ============================================
 # EXPERIMENT TRACKING
@@ -74,6 +72,6 @@ opencv-python==4.9.0.80
 Pillow==10.2.0
 
 # ============================================
-# PROJECT (editable install)
+# PROJECT - Install without editable mode
 # ============================================
--e .
+# NOTE: Run 'pip install .' separately after requirements
