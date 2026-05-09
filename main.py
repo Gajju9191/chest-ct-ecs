@@ -1,30 +1,45 @@
-
-# main.py
 # main.py
 from cnnClassifier import logger
 from cnnClassifier.pipeline.stage_01_data_ingestion import DataIngestionTrainingPipeline
 from cnnClassifier.pipeline.stage_02_prepare_base_model import PrepareBaseModelTrainingPipeline
+from cnnClassifier.pipeline.stage_03_model_trainer import ModelTrainingPipeline
 
+STAGE_1 = "Data Ingestion Stage"
+STAGE_2 = "Prepare Base Model Stage"
+STAGE_3 = "Training Stage"
 
 if __name__ == "__main__":
+    
     # Stage 1: Data Ingestion
     try:
-        logger.info(">>>>>> stage Data Ingestion Stage started <<<<<<")
+        logger.info(f">>>>>> stage {STAGE_1} started <<<<<<")
         obj = DataIngestionTrainingPipeline()
         obj.main()
-        logger.info(">>>>>> stage Data Ingestion Stage completed <<<<<<\n\n==========x==========")
+        logger.info(f">>>>>> stage {STAGE_1} completed <<<<<<\n\n==========x==========")
     except Exception as e:
         logger.exception(e)
         raise e
-    
-
     
     # Stage 2: Prepare Base Model
     try:
-        logger.info(">>>>>> stage Prepare Base Model Stage started <<<<<<")
+        logger.info(f">>>>>> stage {STAGE_2} started <<<<<<")
         obj = PrepareBaseModelTrainingPipeline()
         obj.main()
-        logger.info(">>>>>> stage Prepare Base Model Stage completed <<<<<<\n\n==========x==========")
+        logger.info(f">>>>>> stage {STAGE_2} completed <<<<<<\n\n==========x==========")
     except Exception as e:
         logger.exception(e)
         raise e
+    
+    # Stage 3: Training
+    try:
+        logger.info(f">>>>>> stage {STAGE_3} started <<<<<<")
+        obj = ModelTrainingPipeline()
+        obj.main()
+        logger.info(f">>>>>> stage {STAGE_3} completed <<<<<<\n\n==========x==========")
+    except Exception as e:
+        logger.exception(e)
+        raise e
+    
+    logger.info("="*50)
+    logger.info("ALL STAGES COMPLETED SUCCESSFULLY!")  # ✅ Removed emoji
+    logger.info("="*50)
