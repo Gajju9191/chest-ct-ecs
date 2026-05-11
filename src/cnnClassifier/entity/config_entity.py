@@ -1,9 +1,6 @@
-
-
-
+# src/cnnClassifier/entity/config_entity.py
 from dataclasses import dataclass
 from pathlib import Path
-
 
 @dataclass(frozen=True)
 class DataIngestionConfig:
@@ -11,8 +8,6 @@ class DataIngestionConfig:
     source_URL: str
     local_data_file: Path
     unzip_dir: Path
-
-
 
 @dataclass(frozen=True)
 class PrepareBaseModelConfig:
@@ -25,9 +20,6 @@ class PrepareBaseModelConfig:
     params_weights: str
     params_classes: int
 
-
-
-
 @dataclass(frozen=True)
 class TrainingConfig:
     root_dir: Path
@@ -39,3 +31,15 @@ class TrainingConfig:
     params_is_augmentation: bool
     params_image_size: list
     params_learning_rate: float
+
+@dataclass(frozen=True)
+class EvaluationConfig:
+    root_dir: Path
+    model_path: Path
+    training_data: Path
+    metrics_file: Path
+    confusion_matrix_path: Path
+    mlflow_uri: str
+    params_batch_size: int
+    params_image_size: list
+    params_classes: int

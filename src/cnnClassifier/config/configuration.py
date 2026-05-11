@@ -3,9 +3,10 @@ from pathlib import Path
 from cnnClassifier.constants import CONFIG_FILE_PATH, PARAMS_FILE_PATH
 from cnnClassifier.utils.common import read_yaml, create_directories
 from cnnClassifier.entity.config_entity import (
-    DataIngestionConfig, 
-    PrepareBaseModelConfig, 
-    TrainingConfig
+    DataIngestionConfig,
+    PrepareBaseModelConfig,
+    TrainingConfig,
+    EvaluationConfig
 )
 
 class ConfigurationManager:
@@ -29,6 +30,7 @@ class ConfigurationManager:
         config = self.config.prepare_base_model
         create_directories([config.root_dir])
         
+        # Fixed: changed "PrepareBasemodelConfig" to "PrepareBaseModelConfig"
         return PrepareBaseModelConfig(
             root_dir=Path(config.root_dir),
             base_model_path=Path(config.base_model_path),
@@ -57,4 +59,21 @@ class ConfigurationManager:
             params_is_augmentation=self.params.AUGMENTATION,
             params_image_size=self.params.IMAGE_SIZE,
             params_learning_rate=self.params.LEARNING_RATE
+        )
+    
+    def get_evaluation_config(self) -> EvaluationConfig:
+        eval_cfg = self.config.evaluation
+        training_data = Path(self.config.data_ingestion.unzip_dir) / "Chest-CT-Scan-data"
+        create_directories([eval_cfg.root_dir])
+        
+        return EvaluationConfig(
+            root_dir=Path(eval_cfg.root_dir),
+            model_path=Path(self.config.training.trained_model_path),
+            training_data=training_data,
+            metrics_file=Path(eval_cfg.metrics_file),
+            confusion_matrix_path=Path(eval_cfg.confusion_matrix_path),
+            mlflow_uri=self.config.mlflow_uri,
+            params_batch_size=self.params.BATCH_SIZE,
+            params_image_size=self.params.IMAGE_SIZE,
+            params_classes=self.params.CLASSES
         )
