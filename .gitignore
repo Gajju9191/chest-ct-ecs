@@ -217,4 +217,73 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-artifacts/*
+# ============================================
+# PROJECT SPECIFIC ADDITIONS
+# ============================================
+
+# Terraform (infrastructure as code)
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.backup
+*.tfstate
+*.tfstate.*
+
+# Large model files (exceeds GitHub limit)
+*.h5
+*.pkl
+*.joblib
+*.zip
+*.tar.gz
+*.ckpt
+*.pb
+*.onnx
+
+# Project artifacts and generated files
+artifacts/
+uploads/
+logs/
+temp_image.jpg
+inputImage.jpg
+scores.json
+*.log
+
+# DVC (Data Version Control)
+.dvc/
+.dvcignore
+dvc.lock
+.dvc/cache/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# AWS credentials
+.aws/
+credentials
+config
+
+# Docker
+*.pid
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
