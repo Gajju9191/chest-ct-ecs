@@ -97,17 +97,16 @@ pipeline {
         
         // NEW STAGE: Health Check
         stage('Health Check') {
-            steps {
-                script {
-                    sh """
-                        sleep 10
-                        curl -f http://$(cd terraform && terraform output -raw load_balancer_dns 2>/dev/null || echo 'pending')/health || echo 'Health check pending'
-                    """
-                    echo "✅ Health check completed"
-                }
-            }
+    steps {
+        script {
+            sh """
+                sleep 10
+                curl -f http://\$(cd terraform && terraform output -raw load_balancer_dns 2>/dev/null || echo 'pending')/health || echo 'Health check pending'
+            """
+            echo "✅ Health check completed"
         }
     }
+}
 
     post {
         success {

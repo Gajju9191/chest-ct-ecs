@@ -31,7 +31,7 @@ newgrp docker
 
 sudo apt install awscli -y
 
-if aws cli has  no installation candidate then run below command (it gets error because latest ubuntu version doesn't support directly to aws cli)
+# if aws cli has  no installation candidate then run below command (it gets error because latest ubuntu version doesn't support directly to aws cli)
 
 sudo apt install unzip
 
