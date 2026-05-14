@@ -25,17 +25,21 @@ pipeline {
             }
         }
         
-        // Retrain Model Stage (using python3.11)
+        // Retrain Model Stage using DVC (venv is already active)
         stage('Retrain Model') {
             steps {
                 script {
-                    echo "🔄 Starting model retraining..."
+                    echo "🔄 Starting model retraining with DVC..."
                     sh '''
-                        python3.11 -m pip install -r requirements.txt
-                        python3.11 main.py
+                        # Ensure dependencies are installed
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                        
+                        # Run DVC pipeline (only changed stages)
+                        dvc repro
                     '''
                     sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
-                    echo "✅ Model retrained and uploaded"
+                    echo "✅ Model retrained and uploaded to S3"
                 }
             }
         }
@@ -43,24 +47,28 @@ pipeline {
         stage('Download Model from S3') {
             steps {
                 sh "aws s3 cp s3://${MODEL_BUCKET}/model.h5 model.h5"
+                echo "✅ Model downloaded from S3"
             }
         }
         
         stage('Login to ECR') {
             steps {
                 sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                echo "✅ Logged in to ECR"
             }
         }
 
         stage('Build Image') {
             steps {
                 sh "docker build -t ${ECR_REPOSITORY}:latest ."
+                echo "✅ Docker image built"
             }
         }
 
         stage('Push Image') {
             steps {
                 sh "docker push ${ECR_REPOSITORY}:latest"
+                echo "✅ Docker image pushed to ECR"
             }
         }
 
@@ -70,6 +78,7 @@ pipeline {
                     aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --force-new-deployment --region ${AWS_REGION}
                     aws ecs wait services-stable --cluster ${ECS_CLUSTER} --services ${ECS_SERVICE} --region ${AWS_REGION}
                 """
+                echo "✅ ECS service updated"
             }
         }
         
@@ -79,16 +88,30 @@ pipeline {
                     sleep 10
                     curl -f http://\$(cd terraform && terraform output -raw load_balancer_dns 2>/dev/null || echo 'pending')/health || echo 'Health check pending'
                 """
+                echo "✅ Health check completed"
             }
         }
     }
 
     post {
         success {
-            echo "🎉 Retraining & Deployment Successful! 🎉"
+            echo """
+            ========================================
+            🎉 RETRAINING & DEPLOYMENT SUCCESSFUL! 🎉
+            ========================================
+            ECS Cluster: ${ECS_CLUSTER}
+            ECS Service: ${ECS_SERVICE}
+            ========================================
+            """
         }
         failure {
-            echo "❌ Retraining/Deployment Failed! ❌"
+            echo """
+            ========================================
+            ❌ RETRAINING/DEPLOYMENT FAILED! ❌
+            ========================================
+            Check Jenkins console for details.
+            ========================================
+            """
         }
         always {
             sh 'docker system prune -f'
