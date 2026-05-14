@@ -25,26 +25,31 @@ pipeline {
             }
         }
         
+        // STEP 1: Retrain model using DVC
         stage('Retrain Model') {
             steps {
                 script {
                     echo "🔄 Starting model retraining with DVC..."
                     sh '''
-                        # Activate virtual environment
-                        source /var/lib/jenkins/workspace/ecs-cicd-d/venv/bin/activate
-                        
-                        # Run DVC pipeline
+                        # Activate virtual environment and run DVC
+                        . /var/lib/jenkins/workspace/ecs-cicd-d/venv/bin/activate
                         dvc repro
-                        
-                        # Deactivate
                         deactivate
                     '''
-                    sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
-                    echo "✅ Model retrained and uploaded to S3"
+                    echo "✅ Model retrained successfully"
                 }
             }
         }
         
+        // STEP 2: Upload new model to S3
+        stage('Upload Model to S3') {
+            steps {
+                sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
+                echo "✅ New model uploaded to S3"
+            }
+        }
+        
+        // STEP 3: Download model from S3 (for Docker build)
         stage('Download Model from S3') {
             steps {
                 sh "aws s3 cp s3://${MODEL_BUCKET}/model.h5 model.h5"
@@ -52,6 +57,7 @@ pipeline {
             }
         }
         
+        // STEP 4: Login to ECR
         stage('Login to ECR') {
             steps {
                 sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -59,13 +65,15 @@ pipeline {
             }
         }
 
+        // STEP 5: Build Docker image
         stage('Build Image') {
             steps {
                 sh "docker build -t ${ECR_REPOSITORY}:latest ."
-                echo "✅ Docker image built"
+                echo "✅ Docker image built with new model"
             }
         }
 
+        // STEP 6: Push image to ECR
         stage('Push Image') {
             steps {
                 sh "docker push ${ECR_REPOSITORY}:latest"
@@ -73,16 +81,18 @@ pipeline {
             }
         }
 
+        // STEP 7: Deploy to ECS
         stage('Deploy to ECS') {
             steps {
                 sh """
                     aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --force-new-deployment --region ${AWS_REGION}
                     aws ecs wait services-stable --cluster ${ECS_CLUSTER} --services ${ECS_SERVICE} --region ${AWS_REGION}
                 """
-                echo "✅ ECS service updated"
+                echo "✅ ECS service updated with new model"
             }
         }
         
+        // STEP 8: Health Check
         stage('Health Check') {
             steps {
                 sh """
@@ -96,10 +106,24 @@ pipeline {
 
     post {
         success {
-            echo "🎉 Retraining & Deployment Successful! 🎉"
+            echo """
+            ========================================
+            🎉 RETRAINING & DEPLOYMENT SUCCESSFUL! 🎉
+            ========================================
+            Model retrained, uploaded to S3, and deployed to ECS!
+            ECS Cluster: ${ECS_CLUSTER}
+            ECS Service: ${ECS_SERVICE}
+            ========================================
+            """
         }
         failure {
-            echo "❌ Retraining/Deployment Failed! ❌"
+            echo """
+            ========================================
+            ❌ RETRAINING/DEPLOYMENT FAILED! ❌
+            ========================================
+            Check Jenkins console for details.
+            ========================================
+            """
         }
         always {
             sh 'docker system prune -f'
