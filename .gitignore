@@ -252,7 +252,6 @@ scores.json
 # DVC (Data Version Control)
 .dvc/
 .dvcignore
-dvc.lock
 .dvc/cache/
 
 # MLflow
