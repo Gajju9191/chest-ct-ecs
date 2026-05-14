@@ -12,9 +12,9 @@ pipeline {
         MODEL_BUCKET = 'chest-ct-models-155407238003'
     }
     
-    // ADD THIS: Schedule retraining
+    // Schedule retraining daily at 2 AM
     triggers {
-        cron('0 2 * * *')  // Daily at 2 AM
+        cron('0 2 * * *')
     }
     
     stages {
@@ -25,14 +25,14 @@ pipeline {
             }
         }
         
-        // ADD THIS: Retrain Model Stage
+        // Retrain Model Stage (using python3.11)
         stage('Retrain Model') {
             steps {
                 script {
                     echo "🔄 Starting model retraining..."
                     sh '''
-                        pip install -r requirements.txt
-                        python main.py
+                        python3.11 -m pip install -r requirements.txt
+                        python3.11 main.py
                     '''
                     sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
                     echo "✅ Model retrained and uploaded"
