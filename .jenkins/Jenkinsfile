@@ -2,131 +2,93 @@ pipeline {
     agent any
     
     environment {
-        // AWS Credentials (keep same)
         ECR_REPOSITORY = credentials('ECR_REPOSITORY')
         AWS_ACCOUNT_ID = credentials('AWS_ACCOUNT_ID')
         AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-        
-        // New: ECS Configuration
         AWS_REGION = 'us-east-1'
         ECS_CLUSTER = 'chest-ct-cluster'
         ECS_SERVICE = 'chest-ct-service'
         MODEL_BUCKET = 'chest-ct-models-155407238003'
     }
     
+    // ADD THIS: Schedule retraining
+    triggers {
+        cron('0 2 * * *')  // Daily at 2 AM
+    }
+    
     stages {
-        // NEW STAGE: Checkout code
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "✅ Code checked out from GitHub"
+                echo "✅ Code checked out"
             }
         }
         
-        // NEW STAGE: Download model from S3
+        // ADD THIS: Retrain Model Stage
+        stage('Retrain Model') {
+            steps {
+                script {
+                    echo "🔄 Starting model retraining..."
+                    sh '''
+                        pip install -r requirements.txt
+                        python main.py
+                    '''
+                    sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
+                    echo "✅ Model retrained and uploaded"
+                }
+            }
+        }
+        
         stage('Download Model from S3') {
             steps {
-                script {
-                    sh """
-                        aws s3 cp s3://${MODEL_BUCKET}/model.h5 model.h5
-                    """
-                    echo "✅ Model downloaded from S3"
-                }
+                sh "aws s3 cp s3://${MODEL_BUCKET}/model.h5 model.h5"
             }
         }
         
-        // Keep: Continuous Integration (optional)
-        stage('Continuous Integration') {
-            steps {
-                script {
-                    echo "Linting repository"
-                    echo "Running unit tests"
-                }
-            }
-        }
-
-        // Keep: Login to ECR (same but with region variable)
         stage('Login to ECR') {
             steps {
-                script {
-                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-                }
+                sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
             }
         }
 
-        // Keep: Build Image (same)
         stage('Build Image') {
             steps {
-                script {
-                    sh "docker build -t ${ECR_REPOSITORY}:latest ."
-                }
+                sh "docker build -t ${ECR_REPOSITORY}:latest ."
             }
         }
 
-        // Keep: Push Image (same)
         stage('Push Image') {
             steps {
-                script {
-                    sh "docker push ${ECR_REPOSITORY}:latest"
-                }
+                sh "docker push ${ECR_REPOSITORY}:latest"
             }
         }
 
-        // CHANGED: Deploy to ECS (instead of SSH + docker-compose)
         stage('Deploy to ECS') {
             steps {
-                script {
-                    sh """
-                        aws ecs update-service \
-                            --cluster ${ECS_CLUSTER} \
-                            --service ${ECS_SERVICE} \
-                            --force-new-deployment \
-                            --region ${AWS_REGION}
-                        
-                        aws ecs wait services-stable \
-                            --cluster ${ECS_CLUSTER} \
-                            --services ${ECS_SERVICE} \
-                            --region ${AWS_REGION}
-                    """
-                    echo "✅ ECS service updated"
-                }
+                sh """
+                    aws ecs update-service --cluster ${ECS_CLUSTER} --service ${ECS_SERVICE} --force-new-deployment --region ${AWS_REGION}
+                    aws ecs wait services-stable --cluster ${ECS_CLUSTER} --services ${ECS_SERVICE} --region ${AWS_REGION}
+                """
             }
         }
         
-        // NEW STAGE: Health Check (FIXED: escaped dollar sign)
         stage('Health Check') {
             steps {
-                script {
-                    sh """
-                        sleep 10
-                        curl -f http://\$(cd terraform && terraform output -raw load_balancer_dns 2>/dev/null || echo 'pending')/health || echo 'Health check pending'
-                    """
-                    echo "✅ Health check completed"
-                }
+                sh """
+                    sleep 10
+                    curl -f http://\$(cd terraform && terraform output -raw load_balancer_dns 2>/dev/null || echo 'pending')/health || echo 'Health check pending'
+                """
             }
         }
     }
 
     post {
         success {
-            echo """
-            ========================================
-            🎉 DEPLOYMENT SUCCESSFUL! 🎉
-            ========================================
-            ECS Cluster: ${ECS_CLUSTER}
-            ECS Service: ${ECS_SERVICE}
-            ========================================
-            """
+            echo "🎉 Retraining & Deployment Successful! 🎉"
         }
         failure {
-            echo """
-            ========================================
-            ❌ DEPLOYMENT FAILED! ❌
-            ========================================
-            Check Jenkins console for details.
-            ========================================
-            """
+            echo "❌ Retraining/Deployment Failed! ❌"
         }
         always {
             sh 'docker system prune -f'
