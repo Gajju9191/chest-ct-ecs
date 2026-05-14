@@ -10,9 +10,9 @@ pipeline {
         ECS_CLUSTER = 'chest-ct-cluster'
         ECS_SERVICE = 'chest-ct-service'
         MODEL_BUCKET = 'chest-ct-models-155407238003'
+        VENV_PATH = '/var/lib/jenkins/workspace/ecs-cicd-d/venv'
     }
     
-    // Schedule retraining daily at 2 AM
     triggers {
         cron('0 2 * * *')
     }
@@ -25,18 +25,19 @@ pipeline {
             }
         }
         
-        // Retrain Model Stage using DVC (venv is already active)
         stage('Retrain Model') {
             steps {
                 script {
                     echo "🔄 Starting model retraining with DVC..."
                     sh '''
-                        # Ensure dependencies are installed
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
+                        # Activate virtual environment
+                        source /var/lib/jenkins/workspace/ecs-cicd-d/venv/bin/activate
                         
-                        # Run DVC pipeline (only changed stages)
+                        # Run DVC pipeline
                         dvc repro
+                        
+                        # Deactivate
+                        deactivate
                     '''
                     sh "aws s3 cp artifacts/training/model.h5 s3://${MODEL_BUCKET}/model.h5"
                     echo "✅ Model retrained and uploaded to S3"
@@ -95,23 +96,10 @@ pipeline {
 
     post {
         success {
-            echo """
-            ========================================
-            🎉 RETRAINING & DEPLOYMENT SUCCESSFUL! 🎉
-            ========================================
-            ECS Cluster: ${ECS_CLUSTER}
-            ECS Service: ${ECS_SERVICE}
-            ========================================
-            """
+            echo "🎉 Retraining & Deployment Successful! 🎉"
         }
         failure {
-            echo """
-            ========================================
-            ❌ RETRAINING/DEPLOYMENT FAILED! ❌
-            ========================================
-            Check Jenkins console for details.
-            ========================================
-            """
+            echo "❌ Retraining/Deployment Failed! ❌"
         }
         always {
             sh 'docker system prune -f'
