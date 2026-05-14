@@ -1,4 +1,3 @@
-
 terraform {
   required_providers {
     aws = {
@@ -189,14 +188,46 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 }
 
+# Execution Role Policies (for ECS itself)
 resource "aws_iam_role_policy_attachment" "ecs_execution_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# S3 Bucket for Model (optional)
-resource "aws_s3_bucket" "model_bucket" {
-  bucket = "chest-ct-models-${data.aws_caller_identity.current.account_id}"
+# Task Role Policies (for your application code)
+resource "aws_iam_role_policy_attachment" "ecs_task_ecr_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_ec2_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_ecs_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_s3_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_cloudwatch_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_elb_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_iam_full" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/IAMFullAccess"
 }
 
 # Data source for current account ID

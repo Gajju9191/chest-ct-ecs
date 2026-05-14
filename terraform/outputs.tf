@@ -19,7 +19,8 @@ output "ecs_service_name" {
   description = "Name of the ECS service"
 }
 
-output "model_bucket_name" {
-  value       = aws_s3_bucket.model_bucket.id
-  description = "Name of the S3 bucket for models"
-}
+# S3 bucket is managed manually (not by Terraform)
+# output "model_bucket_name" {
+#   value       = "chest-ct-models-155407238003"
+#   description = "Name of the S3 bucket for models (manually created)"
+# }
